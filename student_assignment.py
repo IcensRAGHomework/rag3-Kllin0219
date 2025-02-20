@@ -2,6 +2,9 @@ import datetime
 import chromadb
 import traceback
 
+import pandas as pd
+import time
+
 from chromadb.utils import embedding_functions
 
 from model_configurations import get_model_configuration
@@ -10,29 +13,75 @@ gpt_emb_version = 'text-embedding-ada-002'
 gpt_emb_config = get_model_configuration(gpt_emb_version)
 
 dbpath = "./"
+csv_file = "COA_OpenData.csv"
 
 def generate_hw01():
-    pass
-    
-def generate_hw02(question, city, store_type, start_date, end_date):
-    pass
-    
-def generate_hw03(question, store_name, new_store_name, city, store_type):
-    pass
-    
-def demo(question):
     chroma_client = chromadb.PersistentClient(path=dbpath)
     openai_ef = embedding_functions.OpenAIEmbeddingFunction(
-        api_key = gpt_emb_config['api_key'],
-        api_base = gpt_emb_config['api_base'],
-        api_type = gpt_emb_config['openai_type'],
-        api_version = gpt_emb_config['api_version'],
-        deployment_id = gpt_emb_config['deployment_name']
+        api_key=gpt_emb_config['api_key'],
+        api_base=gpt_emb_config['api_base'],
+        api_type=gpt_emb_config['openai_type'],
+        api_version=gpt_emb_config['api_version'],
+        deployment_id=gpt_emb_config['deployment_name']
     )
     collection = chroma_client.get_or_create_collection(
         name="TRAVEL",
         metadata={"hnsw:space": "cosine"},
         embedding_function=openai_ef
     )
-    
+
+    df = pd.read_csv(csv_file)
+
+    for idx, row in df.iterrows():
+        metadata = {
+            "file_name": csv_file,
+            "name": row.get("Name", ""),
+            "type": row.get("Type", ""),
+            "address": row.get("Address", ""),
+            "tel": row.get("Tel", ""),
+            "city": row.get("City", ""),
+            "town": row.get("Town", ""),
+            "date": int(time.mktime(datetime.datetime.strptime(row.get("CreateDate", "1970-01-01"), "%Y-%m-%d").timetuple()))
+        }
+
+        document = row.get("HostWords", "")
+
+        collection.add(
+            ids=[str(idx)],
+            documents=[document],
+            metadatas=[metadata]
+        )
+
     return collection
+
+
+def generate_hw02(question, city, store_type, start_date, end_date):
+    pass
+
+
+def generate_hw03(question, store_name, new_store_name, city, store_type):
+    pass
+
+
+def demo(question):
+    chroma_client = chromadb.PersistentClient(path=dbpath)
+    openai_ef = embedding_functions.OpenAIEmbeddingFunction(
+        api_key=gpt_emb_config['api_key'],
+        api_base=gpt_emb_config['api_base'],
+        api_type=gpt_emb_config['openai_type'],
+        api_version=gpt_emb_config['api_version'],
+        deployment_id=gpt_emb_config['deployment_name']
+    )
+    collection = chroma_client.get_or_create_collection(
+        name="TRAVEL",
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=openai_ef
+    )
+
+    return collection
+
+
+if __name__ == '__main__':
+    collection = generate_hw01()
+    data = collection.get(limit=1, include=["embeddings", "documents", "metadatas"])
+    print(data)

@@ -109,6 +109,7 @@ def generate_hw02(question, city, store_type, start_date, end_date):
 
 
 def generate_hw03(question, store_name, new_store_name, city, store_type):
+    
     pass
 
 
@@ -131,10 +132,12 @@ def demo(question):
 
 
 if __name__ == '__main__':
-    # collection = generate_hw01()
-    # data = collection.get(
-    #     limit=1, include=["embeddings", "documents", "metadatas"])
-    # print(data['embeddings'].shape)
+    # demo("我想要找有關茶餐點的店家")
+    collection = generate_hw01()
+    data = collection.get(
+        limit=1, include=["embeddings", "documents", "metadatas"])
+    print(data['embeddings'].shape)
     result = generate_hw02("我想要找有關茶餐點的店家", ["宜蘭縣", "新北市"], ["美食"], datetime.datetime(
         2024, 4, 1), datetime.datetime(2024, 5, 1))
     print(result)
+    result = generate_hw03("我想要找南投縣的田媽媽餐廳，招牌是蕎麥麵", "耄饕客棧", "田媽媽（耄饕客棧）", ["南投縣"], ["美食"])

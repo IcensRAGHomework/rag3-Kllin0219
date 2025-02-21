@@ -31,28 +31,6 @@ def generate_hw01():
         embedding_function=openai_ef
     )
 
-    df = pd.read_csv(csv_file)
-
-    for idx, row in df.iterrows():
-        metadata = {
-            "file_name": csv_file,
-            "name": row.get("Name", ""),
-            "type": row.get("Type", ""),
-            "address": row.get("Address", ""),
-            "tel": row.get("Tel", ""),
-            "city": row.get("City", ""),
-            "town": row.get("Town", ""),
-            "date": int(time.mktime(datetime.datetime.strptime(row.get("CreateDate", "1970-01-01"), "%Y-%m-%d").timetuple()))
-        }
-
-        document = row.get("HostWords", "")
-
-        collection.add(
-            ids=[str(idx)],
-            documents=[document],
-            metadatas=[metadata]
-        )
-
     return collection
 
 
@@ -109,7 +87,33 @@ def generate_hw02(question, city, store_type, start_date, end_date):
 
 
 def generate_hw03(question, store_name, new_store_name, city, store_type):
+    chroma_client = chromadb.PersistentClient(path=dbpath)
+    openai_ef = embedding_functions.OpenAIEmbeddingFunction(
+        api_key=gpt_emb_config['api_key'],
+        api_base=gpt_emb_config['api_base'],
+        api_type=gpt_emb_config['openai_type'],
+        api_version=gpt_emb_config['api_version'],
+        deployment_id=gpt_emb_config['deployment_name']
+    )
+    collection = chroma_client.get_or_create_collection(
+        name="TRAVEL",
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=openai_ef
+    )
     
+    results = collection.query(
+        query_texts=[question],
+        n_results=10,
+        where= {"name" : store_name})
+    
+    if (len(results['ids'][0]) != 0):
+        store_metadata = results["metadatas"][0][0]
+        print(store_metadata)
+        store_metadata["new_store_name"] = new_store_name
+
+        collection.update(
+            ids=[results["ids"][0][0]],
+            metadatas=[store_metadata])
     pass
 
 
@@ -127,6 +131,28 @@ def demo(question):
         metadata={"hnsw:space": "cosine"},
         embedding_function=openai_ef
     )
+    
+    df = pd.read_csv(csv_file)
+
+    for idx, row in df.iterrows():
+        metadata = {
+            "file_name": csv_file,
+            "name": row.get("Name", ""),
+            "type": row.get("Type", ""),
+            "address": row.get("Address", ""),
+            "tel": row.get("Tel", ""),
+            "city": row.get("City", ""),
+            "town": row.get("Town", ""),
+            "date": int(time.mktime(datetime.datetime.strptime(row.get("CreateDate", "1970-01-01"), "%Y-%m-%d").timetuple()))
+        }
+
+        document = row.get("HostWords", "")
+
+        collection.add(
+            ids=[str(idx)],
+            documents=[document],
+            metadatas=[metadata]
+        )
 
     return collection
 
@@ -136,8 +162,8 @@ if __name__ == '__main__':
     collection = generate_hw01()
     data = collection.get(
         limit=1, include=["embeddings", "documents", "metadatas"])
-    print(data['embeddings'].shape)
-    result = generate_hw02("我想要找有關茶餐點的店家", ["宜蘭縣", "新北市"], ["美食"], datetime.datetime(
-        2024, 4, 1), datetime.datetime(2024, 5, 1))
-    print(result)
-    result = generate_hw03("我想要找南投縣的田媽媽餐廳，招牌是蕎麥麵", "耄饕客棧", "田媽媽（耄饕客棧）", ["南投縣"], ["美食"])
+    print(data)
+    # result = generate_hw02("我想要找有關茶餐點的店家", ["宜蘭縣", "新北市"], ["美食"], datetime.datetime(
+    #     2024, 4, 1), datetime.datetime(2024, 5, 1))
+    # print(result)
+    # result = generate_hw03("我想要找南投縣的田媽媽餐廳，招牌是蕎麥麵", "耄饕客棧", "田媽媽（耄饕客棧）", ["南投縣"], ["美食"])
